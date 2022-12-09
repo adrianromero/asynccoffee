@@ -4,12 +4,14 @@
 use std::error::Error;
 use std::option::Option;
 use std::sync::Arc;
-use std::time;
+use std::time::Duration;
+use std::time::Instant;
 
 use rand::rngs::StdRng;
 use rand::SeedableRng;
-use rand_distr::{Distribution, Exp, Uniform};
+// use rand_distr::{Distribution, Exp, Uniform};
 
+use tokio::runtime::Builder;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::error::SendError;
 use tokio::sync::mpsc::UnboundedReceiver;
@@ -24,6 +26,7 @@ use customernames::generate_name;
 #[derive(Debug)]
 pub struct Customer {
     name: Arc<String>,
+    enter: Instant,
     coffee: Option<Coffee>,
 }
 
@@ -36,17 +39,18 @@ pub struct Coffee {
     // ready: bool,
 }
 
-async fn hello_world() {
-    println!("hello, world!");
+async fn coffee_shop() {
+    let ten_millis = Duration::from_millis(100);
 
-    let ten_millis = time::Duration::from_millis(100);
+    // sleep(ten_millis).await;
+    // let mut rnd = StdRng::from_entropy();
+    // let exp = Exp::new(1.0).unwrap();
+    // println!("{} is from a Exp(1) distribution", exp.sample(&mut rnd));
+    // let uni: Uniform<i32> = Uniform::new(0, 10);
+    // println!("{} is from a Uniform distribution", uni.sample(&mut rnd));
 
-    sleep(ten_millis).await;
-    let mut rnd = StdRng::from_entropy();
-    let exp = Exp::new(1.0).unwrap();
-    println!("{} is from a Exp(1) distribution", exp.sample(&mut rnd));
-    let uni: Uniform<i32> = Uniform::new(0, 10);
-    println!("{} is from a Uniform distribution", uni.sample(&mut rnd));
+    println!("Open coffee shop");
+    let opentime = Instant::now();
 
     let (client_tx, client_rx) = mpsc::unbounded_channel::<Customer>();
     let (client_served_tx, mut client_served_rx) = mpsc::unbounded_channel::<Customer>();
@@ -60,16 +64,21 @@ async fn hello_world() {
             sleep(ten_millis).await;
             let new_customer = Customer {
                 name: String::from(generate_name(&mut rnd)).into(),
+                enter: Instant::now(),
                 coffee: None,
             };
-            println!("   --> Cliente entra por un café {:?}", new_customer);
+            println!("   --> Cliente entra por un café: {:?}", new_customer);
             client_tx.send(new_customer)?;
         }
         Ok::<(), SendError<Customer>>(())
     });
     let joincoffestore = task::spawn(async move {
-        while let Some(res) = client_served_rx.recv().await {
-            println!("   --> Cliente satisfecho {:?}", res);
+        while let Some(customer) = client_served_rx.recv().await {
+            println!(
+                "   --> Cliente satisfecho en {} milisegundos: {:?}",
+                customer.enter.elapsed().as_millis(),
+                customer
+            );
         }
         Ok::<(), SendError<Customer>>(())
     });
@@ -89,7 +98,10 @@ async fn hello_world() {
         Ok(_) => println!("Finish OK"),
         Err(err) => println!("Finish Error {}", err),
     }
-    println!("Finish journey");
+    println!(
+        "Finish journey in {} milliseconds",
+        opentime.elapsed().as_millis()
+    );
 }
 
 async fn grinder_machine(
@@ -100,7 +112,7 @@ async fn grinder_machine(
         let name = coffee.label.clone();
         println!("moliendo el café de  {:?}", name);
 
-        sleep(time::Duration::from_millis(200)).await; // tiempo de moltura
+        sleep(Duration::from_millis(200)).await; // tiempo de moltura
         coffee.grinded = true;
 
         grinder_tx.send(coffee).unwrap();
@@ -116,7 +128,7 @@ async fn brewer_machine(
         let label = coffee.label.clone();
         println!("Haciendo el café de  {:?}", label);
 
-        sleep(time::Duration::from_millis(200)).await; // tiempo de elaboración
+        sleep(Duration::from_millis(200)).await; // tiempo de elaboración
         coffee.brewed = true;
 
         brewer_tx.send(coffee).unwrap();
@@ -151,26 +163,21 @@ async fn barista(
     }
 }
 
-#[tokio::main]
-async fn main() -> Result<(), Box<dyn Error>> {
-    println!("Starting");
-    let future = hello_world(); // Nothing is printed
+// #[tokio::main]
+// async fn main() -> Result<(), Box<dyn Error>> {
+//     coffee_shop().await;
+//     Ok(())
+// }
 
-    println!("Awaiting");
-    future.await;
-
-    println!("Stopping");
-
+fn main() -> Result<(), Box<dyn Error>> {
+    //let rt = tokio::runtime::Runtime::new().unwrap();
+    // let rt = Builder::new_multi_thread()
+    //     .worker_threads(2)
+    //     .thread_stack_size(3 * 1024 * 1024)
+    //     .enable_time()
+    //     .build()
+    //     .unwrap();
+    let rt = Builder::new_current_thread().enable_time().build().unwrap();
+    rt.block_on(coffee_shop());
     Ok(())
 }
-
-// #[tokio::main]
-// async fn main() {
-//     println!("hello");
-// }
-// fn main() {
-//     let mut rt = tokio::runtime::Runtime::new().unwrap();
-//     rt.block_on(async {
-//         println!("hello");
-//     })
-// }
