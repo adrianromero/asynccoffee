@@ -9,6 +9,7 @@ use async_channel::{Receiver, Sender};
 use rand::rngs::StdRng;
 use rand::SeedableRng;
 use rand_distr::{Distribution, Exp};
+use tokio::task::JoinSet;
 use tokio::time::sleep;
 
 use crate::customernames::generate_name;
@@ -29,7 +30,34 @@ pub struct Order {
     pub coffee: Coffee,
 }
 
-pub async fn coffeeshop_entry(
+pub async fn open_coffee_shop<F>(shop: F)
+where
+    F: Fn(&mut JoinSet<()>, Sender<(Customer, Coffee)>, Receiver<Customer>) -> (),
+{
+    println!("Opening coffee shop");
+    let opentime = Instant::now();
+
+    let (customer_entry_tx, customer_entry_rx) = async_channel::unbounded::<Customer>();
+    let (customer_exit_tx, customer_exit_rx) = async_channel::unbounded::<(Customer, Coffee)>();
+
+    let mut joinset = JoinSet::new();
+
+    joinset.spawn(coffeeshop_entry(customer_entry_tx, 10.0, 0..100));
+    joinset.spawn(coffeeshop_exit(customer_exit_rx));
+
+    shop(&mut joinset, customer_exit_tx, customer_entry_rx);
+
+    while let Some(res) = joinset.join_next().await {
+        res.unwrap();
+    }
+
+    println!(
+        "Closing coffee shop in {} milliseconds",
+        opentime.elapsed().as_millis()
+    );
+}
+
+async fn coffeeshop_entry(
     customer_entry_tx: Sender<Customer>,
     entries_per_second: f64,
     size: Range<i32>,
@@ -47,7 +75,7 @@ pub async fn coffeeshop_entry(
     }
 }
 
-pub async fn coffeeshop_exit(customer_exit_rx: Receiver<(Customer, Coffee)>) {
+async fn coffeeshop_exit(customer_exit_rx: Receiver<(Customer, Coffee)>) {
     while let Ok(customercoffee) = customer_exit_rx.recv().await {
         println!(
             "   --> Cliente satisfecho en {} milisegundos: {:?} {:?}",

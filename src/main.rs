@@ -26,6 +26,6 @@ fn main() -> Result<(), Box<dyn Error>> {
     //     .build()
     //     .unwrap();
     //let rt = Builder::new_current_thread().enable_time().build().unwrap();
-    rt.block_on(coffeeshop::open_coffee_shop());
+    rt.block_on(company::open_coffee_shop(coffeeshop::adrians_place));
     Ok(())
 }
