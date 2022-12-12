@@ -3,8 +3,7 @@
 
 use std::time::Instant;
 
-use tokio::task;
-use tokio::try_join;
+use tokio::task::JoinSet;
 
 use crate::company::{coffeeshop_entry, coffeeshop_exit, Coffee, Customer, Order};
 use crate::machinery::{coffee_machine, steam_milk_machine};
@@ -22,13 +21,15 @@ pub async fn open_coffee_shop() {
     let (milk_start_tx, milk_start_rx) = async_channel::unbounded::<Order>();
     let (milk_ready_tx, milk_ready_rx) = async_channel::unbounded::<Order>();
 
-    let joinclients = task::spawn(coffeeshop_entry(customer_entry_tx, 10.0, 0..100));
-    let joincoffestore = task::spawn(coffeeshop_exit(customer_exit_rx));
+    let mut set = JoinSet::new();
 
-    let brew_handler = task::spawn(coffee_machine(coffee_start_rx, coffee_ready_tx));
-    let milk_handler = task::spawn(steam_milk_machine(milk_start_rx, milk_ready_tx));
+    set.spawn(coffeeshop_entry(customer_entry_tx, 10.0, 0..100));
+    set.spawn(coffeeshop_exit(customer_exit_rx));
 
-    let barista1_handler = task::spawn(barista(
+    set.spawn(coffee_machine(coffee_start_rx, coffee_ready_tx));
+    set.spawn(steam_milk_machine(milk_start_rx, milk_ready_tx));
+
+    set.spawn(barista(
         "Jose",
         customer_entry_rx,
         customer_exit_tx,
@@ -38,16 +39,20 @@ pub async fn open_coffee_shop() {
         milk_ready_rx,
     ));
 
-    match try_join!(
-        joinclients,
-        joincoffestore,
-        brew_handler,
-        milk_handler,
-        barista1_handler,
-    ) {
-        Ok(_) => println!("Finish OK"),
-        Err(err) => println!("Finish Error {}", err),
+    while let Some(res) = set.join_next().await {
+        res.unwrap();
     }
+
+    // match try_join!(
+    //     joinclients,
+    //     joincoffestore,
+    //     brew_handler,
+    //     milk_handler,
+    //     barista1_handler,
+    // ) {
+    //     Ok(_) => println!("Finish OK"),
+    //     Err(err) => println!("Finish Error {}", err),
+    // }
     println!(
         "Finish journey in {} milliseconds",
         opentime.elapsed().as_millis()
