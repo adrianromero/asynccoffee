@@ -4,6 +4,7 @@
 use std::error::Error;
 
 //use tokio::runtime::Builder;
+use log::LevelFilter;
 
 mod coffeeshop;
 mod company;
@@ -18,6 +19,10 @@ mod staff;
 // }
 
 fn main() -> Result<(), Box<dyn Error>> {
+    env_logger::Builder::new()
+        .filter_level(LevelFilter::Info)
+        .init();
+
     let rt = tokio::runtime::Runtime::new().unwrap();
     // let rt = Builder::new_multi_thread()
     //     .worker_threads(2)

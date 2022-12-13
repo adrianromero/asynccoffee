@@ -14,7 +14,7 @@ pub async fn barista(
     milk_ready_rx: Receiver<Order>,
 ) {
     while let Ok(customer) = customer_entry_rx.recv().await {
-        println!("Bienvenido {} le atiende {}", customer.name, name);
+        log::info!(target: "statistics", "Bienvenido {} le atiende {}", customer.name, name);
 
         let new_order = Order {
             customer: customer,
@@ -32,7 +32,8 @@ pub async fn barista(
 
         let coffee_milk_order = milk_ready_rx.recv().await.unwrap();
 
-        println!(
+        log::info!(
+            target: "statistics",
             "Gracias por su visita {}, vuelva pronto!",
             coffee_milk_order.customer.name
         );

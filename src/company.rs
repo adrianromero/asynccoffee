@@ -34,7 +34,8 @@ pub async fn open_coffee_shop<F>(shop: F)
 where
     F: Fn(&mut JoinSet<()>, Sender<(Customer, Coffee)>, Receiver<Customer>) -> (),
 {
-    println!("Opening coffee shop");
+    log::info!(target: "statistics", "Opening coffee shop");
+
     let opentime = Instant::now();
 
     let (customer_entry_tx, customer_entry_rx) = async_channel::unbounded::<Customer>();
@@ -51,7 +52,8 @@ where
         res.unwrap();
     }
 
-    println!(
+    log::info!(
+        target: "statistics",
         "Closing coffee shop in {} milliseconds",
         opentime.elapsed().as_millis()
     );
@@ -60,25 +62,25 @@ where
 async fn coffeeshop_entry(
     customer_entry_tx: Sender<Customer>,
     entries_per_second: f64,
-    size: Range<i32>,
+    customers: Range<i32>,
 ) {
     let exp = Exp::new(entries_per_second / 1000.0).unwrap();
     let mut rnd = StdRng::from_entropy();
-    for _ in size {
+    for _ in customers {
         sleep(Duration::from_millis(exp.sample(&mut rnd) as u64)).await;
         let new_customer = Customer {
             name: String::from(generate_name(&mut rnd)),
             enter: Instant::now(),
         };
-        println!("   --> Cliente entra por un café: {:?}", new_customer);
+        log::info!(target: "statistics", "Cliente entra por un café: {:?}", new_customer);
         customer_entry_tx.send(new_customer).await.unwrap();
     }
 }
 
 async fn coffeeshop_exit(customer_exit_rx: Receiver<(Customer, Coffee)>) {
     while let Ok(customercoffee) = customer_exit_rx.recv().await {
-        println!(
-            "   --> Cliente satisfecho en {} milisegundos: {:?} {:?}",
+        log::info!(target: "statistics",
+            "Cliente satisfecho en {} milisegundos: {:?} {:?}",
             customercoffee.0.enter.elapsed().as_millis(),
             customercoffee.0,
             customercoffee.1
