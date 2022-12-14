@@ -18,26 +18,8 @@ pub fn adrians_place(
     let (milk_start_tx, milk_start_rx) = async_channel::unbounded::<Order>();
     let (milk_ready_tx, milk_ready_rx) = async_channel::unbounded::<Order>();
 
-    joinset.spawn(coffee_machine(
-        coffee_start_rx.clone(),
-        coffee_ready_tx.clone(),
-    ));
-    joinset.spawn(steam_milk_machine(
-        milk_start_rx.clone(),
-        milk_ready_tx.clone(),
-    ));
     joinset.spawn(coffee_machine(coffee_start_rx, coffee_ready_tx));
     joinset.spawn(steam_milk_machine(milk_start_rx, milk_ready_tx));
-
-    joinset.spawn(barista(
-        "Marta",
-        customer_entry_rx.clone(),
-        customer_exit_tx.clone(),
-        coffee_start_tx.clone(),
-        coffee_ready_rx.clone(),
-        milk_start_tx.clone(),
-        milk_ready_rx.clone(),
-    ));
 
     joinset.spawn(barista(
         "Roberto",

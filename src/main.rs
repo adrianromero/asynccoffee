@@ -20,7 +20,9 @@ mod staff;
 
 fn main() -> Result<(), Box<dyn Error>> {
     env_logger::Builder::new()
-        .filter_level(LevelFilter::Info)
+        .filter_module("channels", LevelFilter::Info)
+        .filter_module("statistics", LevelFilter::Info)
+        // .filter_module("operations", LevelFilter::Info)
         .init();
 
     let rt = tokio::runtime::Runtime::new().unwrap();
