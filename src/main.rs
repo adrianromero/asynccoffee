@@ -12,12 +12,6 @@ mod customernames;
 mod machinery;
 mod staff;
 
-// #[tokio::main]
-// async fn main() -> Result<(), Box<dyn Error>> {
-//     coffee_shop().await;
-//     Ok(())
-// }
-
 fn main() -> Result<(), Box<dyn Error>> {
     env_logger::Builder::new()
         //.filter_module("channels", LevelFilter::Info)

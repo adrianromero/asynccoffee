@@ -56,8 +56,6 @@ where
     joinset.spawn(coffeeshop_entry(customer_entry_tx, 10.0, 0..100));
     joinset.spawn(coffeeshop_exit(customer_exit_rx));
 
-    // logging cada x tiempo del estado de las colas
-
     shop(&mut joinset, customer_exit_tx, customer_entry_rx);
 
     while let Some(res) = joinset.join_next().await {
