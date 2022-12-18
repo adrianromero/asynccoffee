@@ -1,11 +1,25 @@
 //    Rust Examples is a collection of small portions of code written in Rust
 //    Copyright (C) 2022 Adrián Romero Corchado.
 
+use std::time::Duration;
 use std::time::Instant;
+use tokio::time::sleep;
 
 use async_channel::{Receiver, Sender};
 
 use crate::company::{Coffee, Customer, Order};
+
+pub async fn create_order(customer: Customer) -> Order {
+    sleep(Duration::from_millis(100)).await; // tiempo en tomar la orden y cobrar
+    Order {
+        customer: customer,
+        coffee: Coffee {
+            brew: false,
+            milk: false,
+            time: Instant::now(),
+        },
+    }
+}
 
 pub async fn barista(
     name: &str,
@@ -19,14 +33,7 @@ pub async fn barista(
     while let Ok(customer) = customer_entry_rx.recv().await {
         log::info!(target: "operations", "Bienvenido {} le atiende {}", customer.name, name);
 
-        let new_order = Order {
-            customer: customer,
-            coffee: Coffee {
-                brew: false,
-                milk: false,
-                time: Instant::now(),
-            },
-        };
+        let new_order = create_order(customer).await;
 
         coffee_start_tx.send(new_order).await.unwrap();
 

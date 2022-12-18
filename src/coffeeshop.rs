@@ -22,16 +22,6 @@ pub fn adrians_place(
     joinset.spawn(steam_milk_machine(milk_start_rx, milk_ready_tx));
 
     joinset.spawn(barista(
-        "Roberto",
-        customer_entry_rx.clone(),
-        customer_exit_tx.clone(),
-        coffee_start_tx.clone(),
-        coffee_ready_rx.clone(),
-        milk_start_tx.clone(),
-        milk_ready_rx.clone(),
-    ));
-
-    joinset.spawn(barista(
         "Sonia",
         customer_entry_rx.clone(),
         customer_exit_tx.clone(),
